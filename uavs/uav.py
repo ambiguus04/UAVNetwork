@@ -1,5 +1,3 @@
-__author__ = 'marta'
-
 import math
 import random
 
@@ -25,15 +23,15 @@ class Vector(object):
     def length(self, end=None):
         if not end:
             end = Vector()
-        return math.sqrt((end.x - self.x)**2 + (end.y - self.y)**2 + (end.z - self.z)**2)
+        return math.sqrt((end.x - self.x) ** 2 + (end.y - self.y) ** 2 + (end.z - self.z) ** 2)
 
     def print_elements(self):
         print("({:.2f}, {:.2f}, {:.2f})".format(self.x, self.y, self.z))
 
     def direction(self, pos, norm_length):
         x, y = pos.x - self.x, pos.y - self.y
-        length = math.sqrt(x*x + y*y)
-        norm = norm_length/length
+        length = math.sqrt(x * x + y * y)
+        norm = norm_length / length
         x *= norm
         y *= norm
         return x, y
@@ -50,8 +48,9 @@ class UAV(object):
         self.g = -10
         self.random_fly = True
         self.v_xy_norm = 1
+        self.known_thermals = []
 
-    def fly(self,  time):
+    def fly(self, time):
         step = Vector(self.v.x * time, self.v.y * time, self.v.z * time)
         self.pos.add(step)
         # self.pos.print_elements()
@@ -87,4 +86,24 @@ class UAV(object):
         r = self.v_xy_norm
         self.v.x = r * math.cos(rad)
         self.v.y = r * math.sin(rad)
+
+    def add_thermal(self, thermal):
+        # todo: change to fifo, set max size of known thermals set
+        self.known_thermals.append(thermal)
+
+    @property
+    def nearest_thermal(self):
+        if not self.known_thermals:
+            return None
+        nearest = None
+        nearest_dist = 100000
+        for thermal in self.known_thermals:
+            d = thermal.length(self.pos)
+            if d < nearest_dist:
+                nearest = thermal
+                nearest_dist = d
+        return nearest
+
+    def go_to_nearest_thermal(self):
+        self.go_to(self.nearest_thermal)
 

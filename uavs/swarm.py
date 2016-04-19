@@ -1,5 +1,3 @@
-__author__ = 'marta'
-
 from . import uav
 import math
 import random
@@ -13,17 +11,23 @@ class Thermal(uav.Vector):
 
 
 class Environment(object):
-    def __init__(self):
-        self.thermal = Thermal(20, 20, 0)
+    def __init__(self, size=1):
+        self.thermals = [Thermal(20, 20, 0) for i in range(size)]
         self.radius = 1
         self.close = 0.5
         self.area_size = 1000
 
+    def in_distance(self, pos, dist):
+        for thermal in self.thermals:
+            if thermal.length(pos) <= dist:
+                return True
+        return False
+
     def in_thermal(self, pos):
-        return self.thermal.length(pos) <= self.radius
+        return self.in_distance(pos, self.radius)
 
     def in_middle(self, pos):
-        return self.thermal.length(pos) <= self.close
+        return self.in_distance(pos, self.close)
 
     def normalize_pos(self, drone):
         if drone.pos.x < 0:
@@ -34,6 +38,10 @@ class Environment(object):
             drone.pos.y += self.area_size
         if drone.pos.y > self.area_size:
             drone.pos.y -= self.area_size
+
+    def inform_drone(self, drone):
+        for thermal in self.thermals:
+            drone.add_thermal(thermal)
 
 class Swarm(object):
     def __init__(self, size=1, height=10):
@@ -49,6 +57,8 @@ class Swarm(object):
         self.alarm_height = 5
         self.max_thermal_height = self.start_height - 1
         self.env = Environment()
+        for drone in self.drones:
+            self.env.inform_drone(drone) #informuje o wszystkich
 
     def set_velocity(self, velocity):
         for drone in self.drones:
@@ -84,7 +94,7 @@ class Swarm(object):
                 else:
                     drone.v.z = self.v_falling
                     if drone.height() < self.min_height:
-                        drone.go_to(self.env.thermal)
+                        drone.go_to_nearest_thermal()
                         drone.random_fly = False
                         print("idziemy na thermal")
                 if drone.height() >= self.start_height:
