@@ -25,15 +25,32 @@ class Vector(object):
             end = Vector()
         return math.sqrt((end.x - self.x) ** 2 + (end.y - self.y) ** 2 + (end.z - self.z) ** 2)
 
+    def length_norm(self, end, area_size):
+        x = abs(end.x - self.x)
+        move = abs(end.x - self.x + area_size)
+        if move < x:
+            x = move
+        y = abs(end.y - self.y)
+        move = abs(end.y - self.y + area_size)
+        if move < y:
+            y = move
+        z = abs(end.z - self.z)
+        move = abs(end.z - self.z + area_size)
+        if move < z:
+            z = move
+        return math.sqrt(x*x + y*y + z*z)
+
     def print_elements(self):
         print("({:.2f}, {:.2f}, {:.2f})".format(self.x, self.y, self.z))
 
-    def direction(self, pos, norm_length):
+    def direction(self, pos, norm_length, area_size):
         x, y = pos.x - self.x, pos.y - self.y
         length = math.sqrt(x * x + y * y)
         norm = norm_length / length
         x *= norm
         y *= norm
+        if self.length(pos) > self.length_norm(pos, area_size):
+            return -x, -y
         return x, y
 
     def length_x_y(self):
@@ -49,6 +66,7 @@ class UAV(object):
         self.random_fly = True
         self.v_xy_norm = 1
         self.known_thermals = []
+        self.area_size = 1000
 
     def fly(self, time):
         step = Vector(self.v.x * time, self.v.y * time, self.v.z * time)
@@ -60,7 +78,7 @@ class UAV(object):
 
     def go_to(self, pos):
         length = self.v.length_x_y()
-        vx, vy = self.pos.direction(pos, length)
+        vx, vy = self.pos.direction(pos, length, self.area_size)
         self.v.x = vx
         self.v.y = vy
 
@@ -75,9 +93,9 @@ class UAV(object):
         self.v.x = x * self.v_xy_norm / norm
         self.v.y = y * self.v_xy_norm / norm
 
-    def gaussian_direction(self, alpha):
+    def gaussian_direction(self, alpha=0, sigma=45):
         mu = math.radians(alpha)
-        sigma = math.radians(90)
+        sigma = math.radians(sigma)
         rad = random.gauss(mu, sigma)
         if rad < 0:
             rad += 2 * math.pi
@@ -88,7 +106,6 @@ class UAV(object):
         self.v.y = r * math.sin(rad)
 
     def add_thermal(self, thermal):
-        # todo: change to fifo, set max size of known thermals set
         self.known_thermals.append(thermal)
 
     @property
@@ -106,4 +123,10 @@ class UAV(object):
 
     def go_to_nearest_thermal(self):
         self.go_to(self.nearest_thermal)
+
+    def is_known(self, thermal):
+        for known in self.known_thermals:
+            if known.same(thermal):
+                return True
+        return False
 
